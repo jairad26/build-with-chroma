@@ -8,3 +8,6 @@ pandas
 pathlib
 node2vec
 networkx
+streamlit
+pyvis
+watchdog
