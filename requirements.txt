@@ -1,0 +1,10 @@
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch
+chromadb
+sentence-transformers
+numpy
+tqdm
+pandas
+pathlib
+node2vec
+networkx
