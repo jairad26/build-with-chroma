@@ -6,7 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 import logging
 import re
-from research_papers.research_chroma import AI_CATEGORIES  # Import from your existing code
+from research_chroma import AI_CATEGORIES  # Import from your existing code
 import chromadb
 from typing import Dict, List, Set, Optional
 
@@ -152,7 +152,7 @@ class CitationNetwork:
         return analysis
 
 def main():
-    arxiv_path = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/216/arxiv-metadata-oai-snapshot.json')
+    arxiv_path = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/217/arxiv-metadata-oai-snapshot.json')
     
     # Initialize and build network
     network = CitationNetwork(arxiv_path)

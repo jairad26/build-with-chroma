@@ -11,7 +11,7 @@ from embedding_function import MyEmbeddingFunction
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-ARXIV_PATH = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/216/arxiv-metadata-oai-snapshot.json')
+ARXIV_PATH = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/217/arxiv-metadata-oai-snapshot.json')
 
 # Define AI-related categories we're interested in
 AI_CATEGORIES = {

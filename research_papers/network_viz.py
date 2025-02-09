@@ -10,7 +10,7 @@ from typing import List, Dict, Any
 
 
 # Import AI categories from your existing code
-from research_papers.research_chroma import AI_CATEGORIES
+from research_chroma import AI_CATEGORIES
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -276,7 +276,7 @@ def main():
     st.title("ArXiv AI Papers Citation Network")
     
     # Initialize citation network
-    arxiv_path = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/216/arxiv-metadata-oai-snapshot.json')
+    arxiv_path = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/217/arxiv-metadata-oai-snapshot.json')
     
     @st.cache_resource
     def load_network():

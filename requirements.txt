@@ -11,3 +11,4 @@ networkx
 streamlit
 pyvis
 watchdog
+kagglehub

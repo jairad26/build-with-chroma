@@ -6,7 +6,7 @@ from pathlib import Path
 from tqdm import tqdm
 import logging
 import re
-from research_papers.research_chroma import AI_CATEGORIES, ARXIV_PATH  # Import from your existing code
+from research_chroma import AI_CATEGORIES, ARXIV_PATH  # Import from your existing code
 import chromadb
 from typing import Dict, List, Set, Optional
 

@@ -182,7 +182,7 @@ def main():
     
     @st.cache_resource
     def init_analyzer():
-        arxiv_path = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/216/arxiv-metadata-oai-snapshot.json')
+        arxiv_path = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/217/arxiv-metadata-oai-snapshot.json')
         network = CitationNetwork(arxiv_path)
         network.build_graph()
         

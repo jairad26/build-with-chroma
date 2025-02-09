@@ -2,7 +2,7 @@ import json
 import pandas as pd
 from pathlib import Path
 
-ARXIV_PATH = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/216/arxiv-metadata-oai-snapshot.json')
+ARXIV_PATH = Path('/Users/jairadhakrishnan/.cache/kagglehub/datasets/Cornell-University/arxiv/versions/217/arxiv-metadata-oai-snapshot.json')
 
 def peek_data(file_path, n_lines=5):
     papers = []
