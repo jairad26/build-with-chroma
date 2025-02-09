@@ -3,7 +3,7 @@ import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 from typing import Dict, Tuple, List
 import numpy as np
-
+from layer_transfer import LayerMatcher
 class SentenceEmbeddingLoRAX:
     def __init__(
         self,
@@ -109,47 +109,15 @@ class SentenceEmbeddingLoRAX:
     def transfer_adaptation(
         self, 
         source_adaptations: Dict[str, Tuple[torch.Tensor, torch.Tensor]], 
+        source_model: str,
         target_model: str
     ) -> Dict[str, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Transfer adaptations to a new embedding model.
         """
+        source = AutoModel.from_pretrained(source_model)
         target = AutoModel.from_pretrained(target_model)
-        transferred = {}
-        
-        for source_name, (lora_A, lora_B) in source_adaptations.items():
-            target_layer = self.find_matching_layer(target, source_name)
-            if target_layer is None:
-                continue
-                
-            # Move target layer to CPU for SVD
-            target_weight_cpu = target_layer.weight.cpu()
-            U_t, S_t, Vh_t = torch.linalg.svd(target_weight_cpu, full_matrices=False)
-            U_trunc = U_t[:, :self.rank]
-            Vh_trunc = Vh_t[:self.rank, :]
-            
-            # Move matrices to correct device
-            U_trunc = U_trunc.to(self.device)
-            Vh_trunc = Vh_trunc.to(self.device)
-            
-            # Get layer dimensions
-            out_features, in_features = target_layer.weight.shape
-            
-            # Initialize new LoRA matrices
-            new_A = torch.zeros((self.rank, in_features), device=self.device)
-            new_B = torch.zeros((out_features, self.rank), device=self.device)
-            
-            # Ensure source LoRA matrices are on correct device
-            lora_A = lora_A.to(self.device)
-            lora_B = lora_B.to(self.device)
-            
-            # Project to target space while maintaining LoRA dimensions
-            new_A = lora_A  # Keep A as is since it's already rank × in_features
-            new_B = lora_B @ U_trunc.T @ U_trunc  # Project B through target space
-            
-            transferred[source_name] = (new_A, new_B)
-            
-        return transferred
+        return LayerMatcher.transfer_adaptations(source_adaptations, source, target, True)
 
     def apply_adaptation(
         self, 
@@ -226,7 +194,8 @@ if __name__ == "__main__":
     
     # Now test with MPNet
     print("\n=== Testing Transfer to MPNet ===")
-    target_model = "sentence-transformers/all-MiniLM-L6-v2"
+    source_model = "sentence-transformers/all-MiniLM-L6-v2"
+    target_model = "sentence-transformers/all-mpnet-base-v2"
     
     # Create new LoRAX instance with MPNet
     mpnet_lorax = SentenceEmbeddingLoRAX(base_model_name=target_model)
@@ -243,7 +212,7 @@ if __name__ == "__main__":
         print(f"Similarity between '{pos}' and '{neg}': {similarity.item():.3f}")
     
     # Transfer and apply adaptations to MPNet
-    transferred = lorax.transfer_adaptation(adaptations, target_model)
+    transferred = lorax.transfer_adaptation(adaptations, source_model, target_model)
     adapted_model = mpnet_lorax.apply_adaptation(mpnet_lorax.model, transferred)
     
     print("\n=== MPNet After Adaptation Transfer ===")
