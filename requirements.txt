@@ -12,3 +12,11 @@ streamlit
 pyvis
 watchdog
 kagglehub
+langchain
+langchain-openai
+langchain-core
+langchain-anthropic
+langchain-community
+langgraph
+flask
+flask-cors

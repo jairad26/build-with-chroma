@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Persistent Chat</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #sidebar {
+            width: 250px;
+            background: #f5f5f5;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0; /* Prevent sidebar from shrinking */
+        }
+        
+        #main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            min-width: 0; /* Allow content to shrink below min-content width */
+            max-width: calc(100% - 550px); /* Account for both sidebars */
+        }
+        
+        #similar-conversations {
+            width: 300px;
+            background: #f5f5f5;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0; /* Prevent sidebar from shrinking */
+        }
+        
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            word-wrap: break-word;
+            max-width: 100%;
+            white-space: pre-wrap;
+        }
+        
+        .message.human {
+            background: #e3f2fd;
+            margin-left: 100px;
+            margin-right: 20px;
+            align-self: flex-end;
+        }
+        
+        .message.ai {
+            background: #f0f0f0;
+            margin-right: 100px;
+            margin-left: 20px;
+            align-self: flex-start;
+        }
+        
+        #input-form {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #ddd;
+        }
+        
+        #message-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .conversation-item {
+            cursor: pointer;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        
+        .conversation-item:hover {
+            background: #e0e0e0;
+        }
+        
+        .similar-conversation {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .similar-conversation:hover {
+            background: #e0e0e0;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        /* Format code blocks and preserve whitespace */
+        .message pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message code {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>Conversations</h2>
+        <button onclick="startNewConversation()" style="width: 100%; margin-bottom: 20px;">New Conversation</button>
+        {% for id, conv in conversations|dictsort(reverse=true) %}
+        <div class="conversation-item" onclick="loadConversation('{{ id }}')">
+            <div>{{ conv.last_message }}</div>
+            <small>{{ conv.timestamp }}</small>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div id="main-chat">
+        <div id="chat-messages"></div>
+        <form id="input-form" onsubmit="sendMessage(event)">
+            <input type="text" id="message-input" placeholder="Type your message...">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+    
+    <div id="similar-conversations">
+        <h2>Similar Conversations</h2>
+        <div id="similar-list"></div>
+    </div>
+
+    <script>
+        let currentConversationId = null;
+
+        function formatMessage(content) {
+            // Convert markdown-style code blocks
+            content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+            // Convert inline code
+            content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // Convert newlines to <br>
+            content = content.replace(/\n/g, '<br>');
+            return content;
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage('human', message);
+            input.value = '';
+
+            // Send to backend
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: message,
+                    conversation_id: currentConversationId,
+                    find_similar: currentConversationId === null
+                })
+            });
+
+            const result = await response.json();
+            currentConversationId = result.conversation_id;
+            
+            // Add AI response to chat
+            addMessage('ai', result.response);
+            
+            // Update similar conversations only if they were returned
+            if (result.similar_conversations) {
+                updateSimilarConversations(result.similar_conversations);
+            }
+
+            // Update conversations sidebar if this was a new conversation
+            if (currentConversationId) {
+                await updateConversationsSidebar();
+            }
+        }
+
+        async function updateConversationsSidebar() {
+            const response = await fetch('/conversations');
+            const conversations = await response.json();
+            
+            const sidebar = document.getElementById('sidebar');
+            // Preserve the "New Conversation" button
+            const newConvButton = `<h2>Conversations</h2>
+                <button onclick="startNewConversation()" style="width: 100%; margin-bottom: 20px;">New Conversation</button>`;
+            
+            let conversationsHtml = conversations
+                .sort((a, b) => b.id - a.id)
+                .map(conv => `
+                    <div class="conversation-item" onclick="loadConversation('${conv.id}')">
+                        <div>${conv.last_message}</div>
+                        <small>${conv.timestamp}</small>
+                    </div>
+                `).join('');
+            
+            sidebar.innerHTML = newConvButton + conversationsHtml;
+        }
+
+        function addMessage(role, content) {
+            const messages = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = formatMessage(content);
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function updateSimilarConversations(conversations) {
+            const similarList = document.getElementById('similar-list');
+            similarList.innerHTML = '';
+            
+            conversations.forEach(conv => {
+                const div = document.createElement('div');
+                div.className = 'similar-conversation';
+                div.style.cursor = 'pointer';
+                div.onclick = () => loadConversation(conv.conversation_id);
+                div.innerHTML = `
+                    <div>Similarity: ${conv.similarity_score.toFixed(2)}</div>
+                    <div>${formatMessage(conv.conversation[0].content)}</div>
+                    <small>${conv.conversation[0].timestamp}</small>
+                `;
+                similarList.appendChild(div);
+            });
+        }
+
+        async function loadConversation(conversationId) {
+            currentConversationId = conversationId;
+            const response = await fetch(`/conversation/${conversationId}`);
+            const data = await response.json();
+            
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+            
+            // Display messages
+            data.messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.role}`;
+                div.innerHTML = formatMessage(msg.content);
+                chatMessages.appendChild(div);
+            });
+            
+            // Update similar conversations
+            if (data.similar_conversations) {
+                const similarList = document.getElementById('similar-list');
+                similarList.innerHTML = '';
+                
+                data.similar_conversations.forEach(conv => {
+                    const div = document.createElement('div');
+                    div.className = 'similar-conversation';
+                    div.style.cursor = 'pointer';
+                    div.onclick = () => loadConversation(conv.id);
+                    div.innerHTML = `
+                        <div>Similarity: ${conv.similarity_score.toFixed(2)}</div>
+                        <div>${formatMessage(conv.preview)}</div>
+                        <small>${conv.timestamp}</small>
+                    `;
+                    similarList.appendChild(div);
+                });
+            }
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function startNewConversation() {
+            currentConversationId = null;
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.innerHTML = '';
+            const similarList = document.getElementById('similar-list');
+            similarList.innerHTML = '';
+        }
+    </script>
+</body>
+</html> 
