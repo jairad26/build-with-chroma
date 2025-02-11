@@ -97,7 +97,6 @@ class ConversationMemoryGraph:
                 # Fetch all messages from this conversation
                 conv_messages = self.collection.get(
                     where={"conversation_id": conv_id},
-                    limit=10  # Adjust based on expected conversation length
                 )
                 
                 # Sort messages by timestamp and organize into conversation format
