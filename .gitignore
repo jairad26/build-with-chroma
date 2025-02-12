@@ -172,3 +172,4 @@ cython_debug/
 
 chroma_db/
 chroma_db.zip
+persistent-mem-llm/chroma_conversations/
