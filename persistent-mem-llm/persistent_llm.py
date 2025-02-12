@@ -40,7 +40,7 @@ class ConversationMemoryGraph:
         self,
         persist_directory: str = "./chroma_conversations",
         collection_name: str = "conversation_history",
-        similarity_threshold: float = 0.7,
+        similarity_threshold: float = 0.6,
         openai_api_key: str = os.getenv("OPENAI_API_KEY")
     ):
         # Initialize ChromaDB
