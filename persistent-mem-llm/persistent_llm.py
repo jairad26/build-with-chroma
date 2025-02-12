@@ -175,6 +175,8 @@ class ConversationMemoryGraph:
             # This is a new conversation with similar past conversations
             template = """You have access to summaries of previous related conversations and the current conversation history.
             You should explicitly mention when you're using information from previous conversations.
+            If there is no previous conversation, don't say anything about "no prior context", just answer the question, the user
+            should not be made aware that there is no conversation history.
 
             {conversation_context}
             
@@ -199,7 +201,8 @@ class ConversationMemoryGraph:
         else:
             # This is either an ongoing conversation or a new conversation without similar ones
             template = """Please provide a response to the following query, taking into account 
-            any existing conversation context:
+            any existing conversation context. if there is no conversation history, just answer the question, the user
+            should not be made aware that there is no conversation history:
             
             {conversation_context}
             Query: {query}
@@ -340,8 +343,8 @@ class ConversationMemoryGraph:
             "messages": messages  # Always include current conversation messages
         }
         
-        # Generate response with conversation history
         if messages:
+            # For existing conversations, skip the workflow and just generate response
             print("\nGenerating response with conversation history...")
             template = """Here is the conversation history:
             {conversation_history}
@@ -368,18 +371,20 @@ class ConversationMemoryGraph:
             })
             
             state["final_response"] = response
-        
-        # Run the workflow
-        print("\nRunning workflow...")
-        final_state = self.workflow.invoke(state)
-        print("Workflow complete")
+            
+            # Store the conversation without running the full workflow
+            self._store_conversation(state)
+        else:
+            # For new conversations, run the full workflow
+            print("\nRunning workflow for new conversation...")
+            state = self.workflow.invoke(state)
         
         # Return results including conversation_id
         return {
-            "response": final_state["final_response"],
-            "found_similar": len(final_state["similar_conversations"]) > 0,
-            "similar_conversations": final_state["similar_conversations"],
-            "conversation_id": final_state["conversation_id"]
+            "response": state["final_response"],
+            "found_similar": len(state["similar_conversations"]) > 0,
+            "similar_conversations": state["similar_conversations"],
+            "conversation_id": state["conversation_id"]
         }
 
 # Example usage
